@@ -1,0 +1,94 @@
+# Designer Admin — 生产环境 Docker 部署
+
+数据库与应用**分开**部署；应用在**本机用 JDK / Maven / Node 打包**后，再打成运行镜像。
+
+## 目录
+
+```
+deploy/
+├── install-env.sh          # 检查并安装 Docker / JDK / Maven / Node
+├── deploy-db.sh            # 仅部署 MySQL + Redis
+├── deploy-minio.sh         # 本地 MinIO（S3 兼容对象存储，可选）
+├── deploy-app.sh           # 本地打包 + 构建镜像 + 启动应用
+├── stop.sh / restart.sh / logs.sh
+├── .env.example
+├── docker-compose.db.yml
+├── docker-compose.app.yml
+├── build/                  # 本地打包产物暂存（自动生成）
+├── server/Dockerfile
+├── web/Dockerfile          # 管理后台 admin-web
+└── nginx/default.conf      # 前端反代（/admin-api、/app-api）
+```
+
+## 推荐流程
+
+```bash
+cd designer-admin/deploy
+
+# 1. 检查环境，缺什么装什么（Linux 建议 sudo）
+./install-env.sh
+# 仅检查不安装：
+./install-env.sh --check
+
+# 2. 配置
+cp .env.example .env && vim .env
+
+# 3. 启动数据库
+./deploy-db.sh
+
+# 4. 初始化数据库表（首次 / 重置时执行；破坏性操作，请勿对有数据的库重复执行）
+(cd .. && bash sql/init/mysql/00-run-init.sh)
+
+# 5. 打包并部署应用
+./deploy-app.sh
+```
+
+`./install-env.sh` 会检查并按需安装：
+
+| 组件 | 要求 |
+|---|---|
+| Docker + Compose | 运行容器 |
+| JDK 25 (Temurin) | 后端编译 |
+| Maven | 后端打包 |
+| Node.js 18+（默认装 22） | 前端构建 |
+
+支持 macOS（Homebrew）与 Ubuntu/Debian/RHEL 系。
+
+| 入口 | 默认端口 | 说明 |
+|---|---|---|
+| 管理后台 | `APP_PORT=80` | admin-web，账号 `admin / admin123` |
+| 后端直连 | `SERVER_PORT=8080` | 一般不必对外暴露 |
+
+## 使用外部数据库
+
+配置 `.env` 中 `DB_*` / `REDIS_*` 后只执行 `./deploy-app.sh`。建表请执行 `sql/init/mysql/00-run-init.sh`（按 `_base` → `system` / `demo` 分目录导入）；脚本支持交互输入，也可用 `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME` 环境变量免交互。
+
+## 常用命令
+
+| 命令 | 说明 |
+|---|---|
+| `./install-env.sh` | 检查并安装环境 |
+| `./deploy-db.sh` | 启动 MySQL、Redis（不自动建表） |
+| `./deploy-minio.sh` | 启动本地 MinIO（S3 API `9000` / Console `9001`，可选） |
+| `./deploy-app.sh` | 本地打包并部署应用 |
+| `./deploy-app.sh --skip-build` | 跳过打包，用已有 `deploy/build` |
+| `./restart.sh app` / `./stop.sh app` | 重启 / 停止应用 |
+| `./logs.sh server` | 后端日志 |
+
+## 架构
+
+```
+./install-env.sh  →  Docker + JDK + Maven + Node
+本机打包：
+  mvn -pl designer-server -am package
+  designer-ui/admin-web → pnpm run build
+产物同步到 deploy/build/{server,web}
+Docker 运行镜像（JRE / Nginx）→ MySQL / Redis
+```
+
+## 注意事项
+
+1. 修改 `.env` 示例密码；本机库时 `DB_PASSWORD` 与 `MYSQL_ROOT_PASSWORD` 一致。
+2. macOS 安装 Docker Desktop 后需手动打开一次。
+3. 日常发版只跑 `./deploy-app.sh`，不必动数据库。
+4. 数据库表需手动初始化（`bash sql/init/mysql/00-run-init.sh`）；该脚本为**破坏性**（`DROP TABLE` 重建 + 插入种子数据），仅在首次或需要重置时执行，勿对有数据的库重复运行。
