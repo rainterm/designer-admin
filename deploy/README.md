@@ -73,7 +73,13 @@ cp .env.example .env && vim .env
 | `./deploy-app.sh` | 本地打包并部署应用 |
 | `./deploy-app.sh --skip-build` | 跳过打包，用已有 `deploy/build` |
 | `./restart.sh app` / `./stop.sh app` | 重启 / 停止应用 |
-| `./logs.sh server` | 后端日志 |
+| `./logs.sh server` | 后端日志（容器 stdout，受 compose `logging` 限制） |
+
+## 日志
+
+- **文件日志**：容器内 `/app/logs/designer-server.log`，挂载在 `server_logs` 卷（`docker volume inspect` 查看位置）。按「天 + 单文件 10MB」滚动，默认保留 `maxHistory=7` 天 / 总量上限 `totalSizeCap=1GB`。
+- **容器 stdout**：`./logs.sh server` 看到的是 Docker 收集的标准输出（应用控制台日志 + 启动报错），由 `docker-compose.app.yml` 的 `logging.options.max-size=50m` / `max-file=5` 上限约束，最多约 250MB。
+- **调整保留策略**：改后端配置 `solon.logging.appender.file.maxFileSize` / `maxHistory` / `totalSizeCap`，或用环境变量 `LOG_PATH` 覆盖文件路径（默认 `logs/designer-server`）。
 
 ## 架构
 
