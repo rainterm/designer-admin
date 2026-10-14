@@ -1,6 +1,6 @@
 # Designer Admin · Solon + Vue3 后台管理脚手架
 
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![JDK](https://img.shields.io/badge/JDK-25-orange.svg)](https://adoptium.net/temurin/releases/)
 [![Solon](https://img.shields.io/badge/Solon-4.1.0-16A34A.svg)](https://solon.noear.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883.svg)](https://vuejs.org/)
@@ -271,4 +271,4 @@ cd .. && bash sql/init/mysql/00-run-init.sh && cd deploy   # 手动初始化数�
 
 ## 许可证
 
-本项目基于 [Apache License 2.0](LICENSE) 开源，可自由用于商业项目，请保留版权声明。
+本项目基于 [MIT License](LICENSE) 开源，可自由用于商业项目。
