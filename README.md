@@ -126,7 +126,7 @@ pnpm run build    # 产出 dist/
 
 ### 认证与权限
 
-- **登录鉴权**：Sa-Token，token 放 `Authorization` 头，会话存 Redis（可集群共享）；支持验证码（`GET /admin-api/system/auth/captcha`）与登录失败锁定
+- **登录鉴权**：Sa-Token，token 放 `Authorization` 头，会话存 Redis（可集群共享）；滑块验证码（AJ-Captcha，失败达阈值才出现，凭据一次性）与登录失败锁定；`@RateLimit` 再按 IP 给登录接口兜一层频控（挡「换用户名扫」的撞库 / 爆破）
 - **RBAC**：用户 - 角色 - 菜单三级（`sys_user_role` / `sys_role_menu`）；菜单含目录 / 菜单 / 按钮三类，按钮即权限标识（`system:user:add`）
 - **动态路由**：登录后拉取 `/admin-api/system/auth/routers`，前端按用户权限注册路由与菜单
 - **权限控制**：后端 `@SaCheckPermission`，前端 `v-perm` 指令（另有 `@SaCheckLogin` / `@SaIgnore`）
@@ -197,12 +197,13 @@ pnpm run build    # 产出 dist/
 designer-admin/
 ├── pom.xml                         # Maven 父工程
 ├── designer-common/                # 通用：R / BaseEntity / 异常 / 工具 / 注解
-├── designer-framework/             # 框架层与扩展接口（鉴权/日志/任务/存储/消息），禁止依赖 system
+├── designer-framework/             # 框架层与扩展接口（鉴权/限流/验证码/日志/任务/存储/消息），禁止依赖 system
 ├── designer-module-system/         # RBAC（system-api / -service）
 ├── designer-module-demo/           # 示例（demo-api / -service）
 ├── designer-server/                # 启动组装：DesignerApp + app.yml + Solon 胖包
 │   └── src/main/resources/app.yml
 ├── designer-ui/                    # 前端工程
+│   ├── shared/captcha/             # 多前端共用的滑块验证码源码（组件 + 线协议工具）
 │   ├── admin-web/                  # 管理后台（Vue3 + Naive UI）
 │   │   └── src/
 │   │       ├── api/                # 壳层：request / auth / monitor
