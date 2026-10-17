@@ -4,7 +4,7 @@
 [![JDK](https://img.shields.io/badge/JDK-25-orange.svg)](https://adoptium.net/temurin/releases/)
 [![Solon](https://img.shields.io/badge/Solon-4.1.0-16A34A.svg)](https://solon.noear.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883.svg)](https://vuejs.org/)
-[![Gitee star](https://gitee.com/rainterm/designer-admin-solon/badge/star.svg?theme=dark)](https://gitee.com/rainterm/designer-admin-solon)
+[![Gitee star](https://gitee.com/rainterm/designer-admin/badge/star.svg?theme=dark)](https://gitee.com/rainterm/designer-admin)
 
 一套**开箱即用**的企业级后台管理系统脚手架：后端 **Solon 全家桶 + MyBatis-Plus**，前端 **Vue 3 + Naive UI + Vite**，内置 **RBAC 权限模型**与完整的基础能力，克隆即可开发。
 

@@ -1,13 +1,10 @@
 package com.designer.admin.system.controller.admin;
 
-import cn.dev33.satoken.annotation.SaIgnore;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.common.core.R;
-import com.designer.admin.framework.storage.FileStorageService;
-import com.designer.admin.system.mapper.SysFileMapper;
 import com.designer.admin.system.model.entity.SysFile;
+import com.designer.admin.system.model.vo.StorageOptionVO;
 import com.designer.admin.system.service.SysFileService;
-import org.apache.ibatis.solon.annotation.Db;
+import com.designer.admin.system.service.SysStorageConfigService;
 import org.noear.solon.annotation.Controller;
 import org.noear.solon.annotation.Get;
 import org.noear.solon.annotation.Inject;
@@ -16,31 +13,34 @@ import org.noear.solon.annotation.Post;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.UploadedFile;
 
-import java.io.InputStream;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * 文件上传 / 下载（上传会写入 sys_file 元数据；下载按文件记录的存储配置读取）
+ * 文件上传 / 私有下载（上传会写入 sys_file 元数据；下载按文件记录的存储配置读取）
  */
 @Controller
 @Mapping("/admin-api/system/file")
 public class FileController {
 
     @Inject
-    private FileStorageService storageService;
-
-    @Inject
     private SysFileService fileService;
 
-    @Db
-    private SysFileMapper fileMapper;
+    @Inject
+    private SysStorageConfigService storageConfigService;
 
-    /** 上传，返回可访问 URL 与文件记录 */
+    /**
+     * 上传，返回可访问 URL 与文件记录。
+     *
+     * @param configId   指定存储配置，留空用默认配置
+     * @param publicOnly true 时要求所选配置为公开（登录页 Logo 等匿名可访问的资源），
+     *                   落到私有配置会让匿名访客拿到 401
+     */
     @Post
     @Mapping("/upload")
-    public R<Map<String, Object>> upload(UploadedFile file, String dir) {
-        SysFile saved = fileService.upload(file, dir);
+    public R<Map<String, Object>> upload(UploadedFile file, String dir, Long configId, Boolean publicOnly) {
+        SysFile saved = fileService.upload(file, dir, configId, Boolean.TRUE.equals(publicOnly));
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id", saved.getId());
         data.put("url", saved.getUrl());
@@ -53,41 +53,26 @@ public class FileController {
     }
 
     /**
-     * 下载 / 预览（公开，无需登录）。
+     * 上传时可选的公开存储配置。
+     *
+     * <p>只返回启用的公开项，且不含密钥类字段；供系统设置 / 博客设置这类
+     * 「图片要匿名可访问」的上传入口使用，因此不额外要求存储配置的查看权限。</p>
      */
-    @SaIgnore
+    @Get
+    @Mapping("/storage-options")
+    public R<List<StorageOptionVO>> storageOptions() {
+        return R.ok(storageConfigService.listPublicOptions());
+    }
+
+    /**
+     * 私有下载 / 预览：需要登录后台。
+     *
+     * <p>{@code /admin-api/**} 由 Sa-Token 统一要求登录，这里刻意不加 {@code @SaIgnore}。
+     * 公开文件请走 {@code /app-api/system/file/download/**}（见 AppFileController）。</p>
+     */
     @Get
     @Mapping("/download/**")
-    public void download(Context ctx) throws Throwable {
-        String path = ctx.path();
-        // 相对路径取 /download/ 之后，避免与配置前缀硬编码耦合
-        int marker = path.indexOf("/download/");
-        String relative = marker >= 0 ? path.substring(marker + "/download/".length()) : "";
-        while (relative.startsWith("/")) {
-            relative = relative.substring(1);
-        }
-        if (relative.isBlank() || relative.contains("..")) {
-            ctx.status(404);
-            ctx.output("文件不存在");
-            return;
-        }
-
-        SysFile meta = fileMapper.selectOne(new LambdaQueryWrapper<SysFile>()
-                .eq(SysFile::getFilePath, relative)
-                .last("LIMIT 1"));
-        Long configId = meta == null ? null : meta.getConfigId();
-        String storageType = meta == null ? null : meta.getStorageType();
-
-        try (InputStream in = storageService.open(relative, configId, storageType)) {
-            String name = relative.contains("/") ? relative.substring(relative.lastIndexOf('/') + 1) : relative;
-            ctx.contentType(meta != null && meta.getContentType() != null && !meta.getContentType().isBlank()
-                    ? meta.getContentType()
-                    : "application/octet-stream");
-            ctx.headerSet("Content-Disposition", "inline; filename=\"" + name + "\"");
-            in.transferTo(ctx.outputStream());
-        } catch (Exception e) {
-            ctx.status(404);
-            ctx.output("文件不存在");
-        }
+    public void download(Context ctx) throws Exception {
+        fileService.download(ctx, false);
     }
 }

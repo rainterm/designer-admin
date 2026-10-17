@@ -17,6 +17,7 @@ import com.designer.admin.system.model.dto.StorageConfigQueryDTO;
 import com.designer.admin.system.model.dto.StorageConfigSaveDTO;
 import com.designer.admin.system.model.entity.SysStorageConfig;
 import com.designer.admin.system.model.vo.ConfigFieldMeta;
+import com.designer.admin.system.model.vo.StorageOptionVO;
 import com.designer.admin.system.model.vo.StorageTypeVO;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
@@ -58,6 +59,7 @@ public class SysStorageConfigService implements StorageConfigSource {
                 .like(notBlank(query.getConfigName()), SysStorageConfig::getConfigName, query.getConfigName())
                 .eq(notBlank(query.getStorageType()), SysStorageConfig::getStorageType, query.getStorageType())
                 .eq(query.getStatus() != null, SysStorageConfig::getStatus, query.getStatus())
+                .eq(query.getIsPublic() != null, SysStorageConfig::getIsPublic, query.getIsPublic())
                 .orderByDesc(SysStorageConfig::getIsDefault)
                 .orderByDesc(SysStorageConfig::getId));
         page.getRecords().forEach(this::maskSecrets);
@@ -81,6 +83,7 @@ public class SysStorageConfigService implements StorageConfigSource {
         view.put("storageType", cfg.getStorageType());
         view.put("isDefault", cfg.getIsDefault());
         view.put("status", cfg.getStatus());
+        view.put("isPublic", cfg.getIsPublic());
         view.put("urlPrefix", cfg.getUrlPrefix());
         view.put("allowedExtensions", cfg.getAllowedExtensions());
         view.put("maxSize", cfg.getMaxSize());
@@ -92,13 +95,15 @@ public class SysStorageConfigService implements StorageConfigSource {
     }
 
     public List<StorageTypeVO> listTypes() {
-        String defaultUrlPrefix = storageProperties.normalizedUrlPrefix();
+        String privateUrlPrefix = storageProperties.normalizedPrivateUrlPrefix();
+        String publicUrlPrefix = storageProperties.normalizedPublicUrlPrefix();
         return providerRegistry.list().stream().map(p -> {
             StorageTypeVO vo = new StorageTypeVO();
             vo.setType(p.type());
             vo.setLabel(p.label());
             vo.setFields(p.configFields().stream().map(this::toConfigField).toList());
-            vo.setDefaultUrlPrefix(defaultUrlPrefix);
+            vo.setDefaultUrlPrefix(privateUrlPrefix);
+            vo.setPublicUrlPrefix(publicUrlPrefix);
             return vo;
         }).toList();
     }
@@ -137,6 +142,11 @@ public class SysStorageConfigService implements StorageConfigSource {
         Map<String, Object> props = mergeConfig(existing, dto);
         validateRequiredFields(provider, props);
         provider.validateConfig(props);
+
+        // 旧客户端未传访问类型时保持原值，避免默认值把公开配置误改成私有
+        if (dto.getIsPublic() == null) {
+            dto.setIsPublic(existing.getIsPublic() == null ? 0 : existing.getIsPublic());
+        }
 
         SysStorageConfig entity = new SysStorageConfig();
         entity.setId(dto.getId());
@@ -238,12 +248,67 @@ public class SysStorageConfigService implements StorageConfigSource {
         return toRuntime(cfg);
     }
 
+    /**
+     * 上传时可供选择的公开配置：只列「启用 + 公开」的项，默认项排在最前。
+     *
+     * <p>登录页 Logo、前台图片这类资源必须匿名可访问，落到私有配置上会直接 401，
+     * 所以上传入口只给公开项，不让人选错。</p>
+     */
+    public List<StorageOptionVO> listPublicOptions() {
+        List<SysStorageConfig> list = configMapper.selectList(new LambdaQueryWrapper<SysStorageConfig>()
+                .eq(SysStorageConfig::getStatus, 1)
+                .eq(SysStorageConfig::getIsPublic, 1)
+                .orderByDesc(SysStorageConfig::getIsDefault)
+                .orderByAsc(SysStorageConfig::getId));
+        return list.stream().map(cfg -> {
+            StorageOptionVO vo = new StorageOptionVO();
+            vo.setId(cfg.getId());
+            vo.setConfigName(cfg.getConfigName());
+            vo.setStorageType(cfg.getStorageType());
+            vo.setIsDefault(cfg.getIsDefault());
+            vo.setMaxSize(cfg.getMaxSize());
+            return vo;
+        }).toList();
+    }
+
+    /**
+     * 解析上传目标配置。
+     *
+     * <p>与下载不同：上传必须落在**启用**的配置上（停用配置只允许读旧文件），
+     * {@code requirePublic} 为 true 时还要求标记为公开。</p>
+     *
+     * @param configId      null 表示默认配置
+     * @param requirePublic 是否要求公开（前台匿名资源，如登录页 Logo）
+     */
+    public StorageRuntimeConfig requireUploadRuntime(Long configId, boolean requirePublic) {
+        StorageRuntimeConfig target;
+        if (configId == null) {
+            target = requireDefaultRuntime();
+        } else {
+            SysStorageConfig cfg = configMapper.selectById(configId);
+            if (cfg == null) {
+                throw new BizException("存储配置不存在");
+            }
+            if (cfg.getStatus() == null || cfg.getStatus() != 1) {
+                throw new BizException("存储配置「" + cfg.getConfigName() + "」已停用，请先启用");
+            }
+            target = toRuntime(cfg);
+        }
+        if (requirePublic && !target.isPublicAccess()) {
+            throw new BizException("该存储配置为私有，前台匿名访问的资源请选择公开配置");
+        }
+        return target;
+    }
+
     public StorageRuntimeConfig toRuntime(SysStorageConfig cfg) {
+        boolean publicAccess = cfg.getIsPublic() != null && cfg.getIsPublic() == 1;
         return StorageRuntimeConfig.builder()
                 .configId(cfg.getId())
                 .configName(cfg.getConfigName())
                 .storageType(cfg.getStorageType())
-                .urlPrefix(cfg.getUrlPrefix())
+                // 前缀由访问类型决定，避免私有配置误配成公开前缀绕过鉴权
+                .urlPrefix(storageProperties.urlPrefix(publicAccess))
+                .publicAccess(publicAccess)
                 .allowedExtensions(cfg.getAllowedExtensions())
                 .maxSize(cfg.getMaxSize() == null ? 5242880L : cfg.getMaxSize())
                 .props(JsonUtil.toMap(cfg.getConfigJson()))
@@ -259,7 +324,8 @@ public class SysStorageConfigService implements StorageConfigSource {
         entity.setStorageType(dto.getStorageType().trim());
         entity.setIsDefault(dto.getIsDefault() == null ? 0 : dto.getIsDefault());
         entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
-        entity.setUrlPrefix(blankToDefault(dto.getUrlPrefix(), storageProperties.normalizedUrlPrefix()));
+        entity.setIsPublic(dto.getIsPublic() == null ? 0 : dto.getIsPublic());
+        entity.setUrlPrefix(storageProperties.urlPrefix(entity.getIsPublic() == 1));
         entity.setAllowedExtensions(blankToDefault(dto.getAllowedExtensions(),
                 "jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt"));
         entity.setMaxSize(dto.getMaxSize() == null || dto.getMaxSize() <= 0 ? 5242880L : dto.getMaxSize());
@@ -315,6 +381,9 @@ public class SysStorageConfigService implements StorageConfigSource {
         }
         if (!notBlank(dto.getStorageType())) {
             throw new BizException("存储类型不能为空");
+        }
+        if (dto.getIsPublic() != null && dto.getIsPublic() != 0 && dto.getIsPublic() != 1) {
+            throw new BizException("访问类型只能是公开或私有");
         }
         if (!providerRegistry.supports(dto.getStorageType())) {
             throw new BizException("不支持的存储类型：" + dto.getStorageType());

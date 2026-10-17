@@ -5,6 +5,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.designer.admin.common.core.R;
 import com.designer.admin.framework.ratelimit.RateLimit;
 import com.designer.admin.framework.ratelimit.RateLimitDimension;
+import com.designer.admin.framework.satoken.DownloadTokenCookie;
 import com.designer.admin.system.model.dto.LoginDTO;
 import com.designer.admin.system.model.dto.SsoExchangeDTO;
 import com.designer.admin.system.model.dto.SsoTicketDTO;
@@ -90,7 +91,10 @@ public class AuthController {
                     message = "24 小时内登录尝试次数过多，请稍后再试")
     })
     public R<LoginVO> login(@Body @Validated LoginDTO dto, Context ctx) {
-        return R.ok(authService.login(dto, ctx));
+        LoginVO vo = authService.login(dto, ctx);
+        // 私有下载 URL 在浏览器直接打开时带不了请求头，额外下发一份 Path 限定的 Cookie
+        DownloadTokenCookie.write(ctx, vo.getToken(), vo.getExpiresIn());
+        return R.ok(vo);
     }
 
     /**
@@ -98,8 +102,9 @@ public class AuthController {
      */
     @Post
     @Mapping("/logout")
-    public R<Void> logout() {
+    public R<Void> logout(Context ctx) {
         StpUtil.logout();
+        DownloadTokenCookie.clear(ctx);
         return R.ok();
     }
 
@@ -137,7 +142,9 @@ public class AuthController {
     @SaIgnore
     @Post
     @Mapping("/sso/exchange")
-    public R<LoginVO> ssoExchange(@Body @Validated SsoExchangeDTO dto) {
-        return R.ok(ssoService.exchange(dto == null ? null : dto.getTicket()));
+    public R<LoginVO> ssoExchange(@Body @Validated SsoExchangeDTO dto, Context ctx) {
+        LoginVO vo = ssoService.exchange(dto == null ? null : dto.getTicket());
+        DownloadTokenCookie.write(ctx, vo.getToken(), vo.getExpiresIn());
+        return R.ok(vo);
     }
 }
