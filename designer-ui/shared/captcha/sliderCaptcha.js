@@ -4,17 +4,20 @@ import ECB from 'crypto-js/mode-ecb.js'
 import Pkcs7 from 'crypto-js/pad-pkcs7.js'
 
 /**
- * 滑块验证码的线协议工具，各前端共用。
+ * 滑块验证码的线协议工具，各入口共用。
  *
  * <p>AJ-Captcha 的官方前端是 jQuery 写的 `verify.js`（外加 `ase.js` + `crypto-js`），
- * 直接塞进新前端里既带进 jQuery，又要在 `window` 上挂全局。
+ * 直接塞进两个新前端里既带进 jQuery，又要在 `window` 上挂全局。
  * 这里只把它的**线协议**搬过来（已在后端逐个字段验证过），交互层用 Vue 自己实现：</p>
  *
  * <ul>
- *   <li>{@code POST /captcha/get} → {@code {originalImageBase64, jigsawImageBase64, token, secretKey}}</li>
- *   <li>{@code POST /captcha/check} ← {@code {captchaType, token, pointJson}}</li>
+ *   <li>{@code POST /app-api/captcha/get} → {@code {originalImageBase64, jigsawImageBase64, token, secretKey}}</li>
+ *   <li>{@code POST /app-api/captcha/check} ← {@code {captchaType, token, pointJson}}</li>
  *   <li>业务请求 ← {@code captchaVerification}</li>
  * </ul>
+ *
+ * <p>公开前缀是 {@code /app-api/captcha}（后端另有 AppCaptchaController 映射它，
+ * 插件原生端点 {@code /captcha} 不对外），这里只描述浏览器看到的那一层。</p>
  *
  * <p>其中两个凭据都是「明文 JSON 做 AES-128-ECB/PKCS7 再 Base64」，与官方 `ase.js`
  * 中的 {@code aesEncrypt} 完全一致（服务端用同一个 secretKey 解密）。

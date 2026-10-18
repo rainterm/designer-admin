@@ -6,7 +6,7 @@ export const login = (data) => request.post('/admin-api/system/auth/login', data
 /**
  * 询问该账号本次登录是否需要人机验证。
  *
- * <p>只返回 `{ enabled }` —— 滑块本身由 AJ-Captcha 的 `/captcha/get` 下发
+ * <p>只返回 `{ enabled }` —— 滑块本身由 AJ-Captcha 的 `/app-api/captcha/get` 下发
  * （见 `@/api/captcha`）。</p>
  */
 export const getCaptcha = (username) =>
@@ -28,7 +28,9 @@ export const createSsoTicket = (data) => request.post('/admin-api/system/auth/ss
 export const exchangeSsoTicket = (ticket) =>
   request.post('/admin-api/system/auth/sso/exchange', { ticket })
 
-/** 个人中心（后端从 query 绑定，无 @Body） */
+/** 个人中心资料：查询无参；修改走 JSON 请求体（ProfileUpdateDTO） */
 export const getProfile = () => request.get('/admin-api/system/profile')
-export const updateProfile = (data) => request.put('/admin-api/system/profile/update', null, { params: data })
-export const changePassword = (data) => request.put('/admin-api/system/profile/password', null, { params: data })
+export const updateProfile = (data) => request.put('/admin-api/system/profile/update', data)
+
+/** 改密：与资料修改一致，走 JSON 请求体（PasswordUpdateDTO），避免密码出现在 URL 查询串里被访问日志记录 */
+export const changePassword = (data) => request.put('/admin-api/system/profile/password', data)

@@ -1,12 +1,12 @@
 package com.designer.admin.framework.config;
 
+import com.designer.admin.framework.client.IpRegionResolver;
 import com.designer.admin.framework.client.TrustedProxyHostUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
 import org.noear.solon.core.util.HostUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,11 +21,12 @@ import java.util.List;
  * <p>配置项 {@code designer.client-ip.trusted-proxies}（逗号分隔的 IP / CIDR）：
  * 只有来自这些地址的请求才允许携带转发头。默认包含回环地址与 Docker 默认网桥网段。
  * <b>反向代理不在这些网段内时必须补上</b>，否则真实客户端 IP 会变成代理自身地址。</p>
+ *
+ * @author 雨夜终端
  */
 @Configuration
+@Slf4j
 public class ClientIpConfig {
-
-    private static final Logger log = LoggerFactory.getLogger(ClientIpConfig.class);
 
     /** 默认可信：回环（nginx 同机）+ Docker 默认网桥网段（nginx 与 server 同 compose 网络） */
     private static final String DEFAULT_TRUSTED_PROXIES = "127.0.0.1/32, ::1/128, 172.16.0.0/12";
@@ -43,5 +44,18 @@ public class ClientIpConfig {
         HostUtil.globalSet(hostUtil);
         log.info("可信代理网段已加载：{}", cidrs);
         return hostUtil;
+    }
+
+    /**
+     * IP 归属地解析器（离线 ip2region）。
+     *
+     * <p>数据文件默认使用随应用打包的类路径 {@code ip2region.xdb}；
+     * 配置 {@code designer.ip-location.xdb-path} 可指向外部文件以便单独升级数据。
+     * 数据文件缺失时不会阻止启动，归属地会统一退化为「未知」。</p>
+     */
+    @Bean
+    public IpRegionResolver ipRegionResolver() {
+        String xdbPath = Solon.cfg().get("designer.ip-location.xdb-path", "");
+        return new IpRegionResolver(xdbPath);
     }
 }

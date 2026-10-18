@@ -11,14 +11,16 @@ import org.noear.solon.core.handle.Context;
  * 只有首段是真实客户端；再按库表列宽截断。</p>
  *
  * <p>放在 {@code framework} 而不是各业务模块：限流键与落库 IP 必须是同一个值，
- * 两处各解析一遍最难排查（同一次请求在登录日志和操作日志里记成不同 IP）。</p>
+ * 两处各解析一遍最难排查（同一次请求在业务表与访问日志里记成不同 IP）。</p>
+ *
+ * @author 雨夜终端
  */
 public final class ClientIpUtil {
 
     /** 取不到 IP 时的兜底值：避免所有无 IP 请求共用一个空键 */
     public static final String UNKNOWN_IP = "unknown";
 
-    /** 与 sys_login_log.ip / sys_oper_log.oper_ip 列宽一致 */
+    /** 与各业务表、访问日志的 IP 列宽一致 */
     private static final int MAX_LENGTH = 64;
 
     private ClientIpUtil() {

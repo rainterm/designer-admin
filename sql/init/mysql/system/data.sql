@@ -27,13 +27,13 @@ INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `email`, `phon
 
 -- ------------------------- 参数配置 -------------------------
 INSERT INTO `sys_config` (`id`, `config_name`, `config_key`, `config_value`, `config_type`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
-(1, '账号登录验证码', 'sys.account.captchaEnabled', 'true', 'Y', '是否开启登录验证码（开启后仍需连续失败达到阈值才显示）', 'system', NOW(), 'system', NOW()),
+(1, '账号登录验证码', 'sys.account.captchaEnabled', 'true', 'Y', '是否开启登录验证码（滑块拼图；开启后仍需连续失败达到阈值才显示）', 'system', NOW(), 'system', NOW()),
 (2, '账号登录失败锁定', 'sys.account.lockEnabled', 'true', 'Y', '是否开启登录失败锁定', 'system', NOW(), 'system', NOW()),
 (3, '登录失败最大次数', 'sys.account.lockMaxRetry', '5', 'Y', '连续失败达到次数后锁定', 'system', NOW(), 'system', NOW()),
 (4, '登录锁定时长(分钟)', 'sys.account.lockMinutes', '10', 'Y', '锁定时长，单位分钟', 'system', NOW(), 'system', NOW()),
 (6, 'Token绝对有效期(秒)', 'sys.account.tokenTimeout', '86400', 'Y', 'Token 最长存活时间，到期必须重新登录；默认 86400=1天，最小 60', 'system', NOW(), 'system', NOW()),
 (7, 'Token活跃续期(秒)', 'sys.account.tokenActiveTimeout', '1800', 'Y', '有请求则自动续期；连续闲置超过该秒数踢出；默认 1800=30分钟，-1 关闭', 'system', NOW(), 'system', NOW()),
-(8, '验证码失败阈值', 'sys.account.captchaFailThreshold', '3', 'Y', '同一账号连续登录失败达到该次数后才要求验证码，默认 3', 'system', NOW(), 'system', NOW());
+(8, '验证码失败阈值', 'sys.account.captchaFailThreshold', '3', 'Y', '同一账号连续登录失败达到该次数后才要求滑块验证，默认 3', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 系统设置（单行）-------------------------
 -- 系统名称 / 登录页副标题 / Logo / 默认偏好设置；由「系统管理 → 系统设置」菜单维护
@@ -41,7 +41,7 @@ INSERT INTO `sys_setting` (`id`, `system_name`, `login_subtitle`, `logo_url`, `l
 (1, 'Designer Admin', '统一管理后台，让协作更高效', '', 6, 'mixed-vertical', '#16A34A', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 菜单（目录 / 菜单）-------------------------
--- 按大模块划分：系统模块（内含二级目录）/ 博客模块(8000) / 示例模块(9000)
+-- 按大模块划分：系统模块（内含二级目录）/ 示例模块(9000)
 INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `component`, `perms`, `icon`, `sort`, `visible`, `status`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
 -- 大模块：系统
 (6,  0, '系统模块', 'M', '/sys',      '', '', 'grid',     1, 1, 1, 'system', NOW(), 'system', NOW()),
@@ -201,7 +201,7 @@ INSERT INTO `sys_storage_config` (`id`, `config_name`, `storage_type`, `is_defau
  'jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt',
  5242880,
  '{"localPath":"./data/uploads"}',
- '系统内置本地存储（公开）', 'system', NOW(), 'system', NOW());
+ '系统内置本地存储（公开，可匿名访问）', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 默认站内通知通道（系统接收）-------------------------
 INSERT INTO `sys_message_config` (`id`, `config_name`, `channel_type`, `is_default`, `status`, `config_json`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES

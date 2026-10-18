@@ -219,6 +219,10 @@ router.beforeEach(async (to) => {
     if (to.matched.length === 0 || to.name === 'CatchAll') {
       return { path: '/404', replace: true }
     }
+    // 不走后端菜单注册的独立页需自行声明权限，防止手输 URL 越权
+    if (to.meta?.authPerm && !userStore.hasPerm(to.meta.authPerm)) {
+      return { path: '/403', query: { perm: to.meta.authPerm }, replace: true }
+    }
     return true
   }
 

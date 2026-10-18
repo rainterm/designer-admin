@@ -10,15 +10,20 @@ import java.util.List;
 /**
  * OAuth2 客户端凭证登录（独立 loginType，与后台用户会话隔离）。
  * <p>Sa-Token 禁止 loginId 含冒号，故直接以 clientId 作为 loginId（已由 loginType=oauth2 隔离）。
+ *
+ * @author 雨夜终端
  */
-public final class StpOAuthUtil {
+public final class StpOauthUtil {
+
+    /** Authorization 头的 Bearer 前缀 */
+    private static final String BEARER_PREFIX = "Bearer ";
 
     public static final String TYPE = "oauth2";
     public static final String SCOPES_KEY = "scopes";
 
     public static final StpLogic STP = new StpLogic(TYPE);
 
-    private StpOAuthUtil() {
+    private StpOauthUtil() {
     }
 
     public static void login(String clientId, List<String> scopes, long timeoutSeconds) {
@@ -70,8 +75,9 @@ public final class StpOAuthUtil {
             return null;
         }
         String v = authorization.trim();
-        if (v.length() > 7 && v.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            return v.substring(7).trim();
+        int prefixLength = BEARER_PREFIX.length();
+        if (v.length() > prefixLength && v.regionMatches(true, 0, BEARER_PREFIX, 0, prefixLength)) {
+            return v.substring(prefixLength).trim();
         }
         return v;
     }

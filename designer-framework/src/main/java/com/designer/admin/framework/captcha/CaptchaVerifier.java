@@ -13,7 +13,8 @@ import org.noear.solon.annotation.Inject;
  *
  * <p><b>为什么业务侧还要再校验一次</b>：AJ-Captcha 是两段式设计。</p>
  * <ol>
- *   <li>前端拖完滑块调 {@code POST /captcha/check}，服务端比对偏移量、判定「是不是人」。
+ *   <li>前端拖完滑块调 {@code POST /app-api/captcha/check}，服务端比对偏移量、
+ *       判定「是不是人」。
  *       通过后它会往缓存里写一条以本次 token 为键的「二次校验凭据」，并把
  *       {@code captchaVerification}（= {@code AES(token + "---" + {x,y})}）交给前端；</li>
  *   <li>业务请求带上这个 {@code captchaVerification}，服务端调
@@ -32,9 +33,11 @@ import org.noear.solon.annotation.Inject;
  * 凭据是一次性的，站点关停 / 无需验证码的请求先拒掉，免得白白消费掉一张
  * （消费了用户就得重新拖一次滑块）。</p>
  *
- * <p><b>与 {@code com.designer.admin.system.service.LoginAttemptService} 的分工</b>：
+ * <p><b>与 {@code com.designer.admin.system.service.auth.LoginAttemptService} 的分工</b>：
  * 这个类只管「凭据是否有效」，不关心谁在调、要不要调；
  * 「什么时候该要求验证码」（如登录失败达阈值）属于业务策略，留在各自模块里。</p>
+ *
+ * @author 雨夜终端
  */
 @Component
 public class CaptchaVerifier {
@@ -45,7 +48,7 @@ public class CaptchaVerifier {
     /**
      * 校验并通过则返回；失败抛业务异常。
      *
-     * @param captchaVerification 前端从 {@code POST /captcha/check} 拿到的凭据
+     * @param captchaVerification 前端从 {@code POST /app-api/captcha/check} 拿到的凭据
      */
     public void assertVerified(String captchaVerification) {
         if (captchaVerification == null || captchaVerification.isBlank()) {

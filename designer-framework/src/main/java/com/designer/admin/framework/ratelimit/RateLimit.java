@@ -17,12 +17,12 @@ import java.lang.annotation.Target;
  * <p><b>典型用法</b>：</p>
  * <pre>{@code
  * // 匿名接口按 IP：每分钟 20 次
- * @RateLimit(name = "captcha-get", rules = @RateLimit.Rule(count = 20, window = 60))
+ * @RateLimit(name = "comment-captcha", rules = @RateLimit.Rule(count = 20, window = 60))
  *
  * // 一条规则挡不住全部形态：间隔 + 日配额，两条规则共用一个 name
- * @RateLimit(name = "system:login", rules = {
+ * @RateLimit(name = "comment-submit", rules = {
  *         @RateLimit.Rule(count = 1, window = 30, message = "操作太频繁了，请 {} 秒后再试"),
- *         @RateLimit.Rule(count = 20, window = 24 * 60 * 60, message = "今日次数已达上限")
+ *         @RateLimit.Rule(count = 20, window = 24 * 60 * 60, message = "今日操作次数已达上限")
  * })
  * }</pre>
  *
@@ -48,6 +48,8 @@ import java.lang.annotation.Target;
  * 同一个 bean 内部的 {@code this.xxx()} 自调用会绕过代理。因此**标注在 Controller 方法上**
  * 是最省心的用法 —— 方法体里调用的 service 一定在代理之外。
  * 反过来把它挂在 service 的私有/自调方法上是无效的（Solon 不报错，只是静默不生效）。</p>
+ *
+ * @author 雨夜终端
  */
 @Documented
 @Target({ElementType.METHOD, ElementType.TYPE})

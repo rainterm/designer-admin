@@ -17,14 +17,15 @@ deploy/
 ├── build/                  # 本地打包产物暂存（自动生成）
 ├── server/Dockerfile
 ├── web/Dockerfile          # 管理后台 admin-web
-└── nginx/default.conf      # 前端反代（/admin-api、/app-api、/captcha）
+└── nginx/default.conf      # 前端反代（/admin-api、/app-api、/app-api/captcha）
 ```
 
-> **关于 `/captcha/`**：滑块验证码的端点是 AJ-Captcha 插件写死的 `/captcha/get`、`/captcha/check`，
-> 挂在**根路径**上（不在 `/admin-api` 前缀下），所以 `nginx/default.conf` 里单独有一条
-> `location /captcha/`（限流桶 `admin_captcha`）。少了它，请求会落到 `location /` 的
-> `try_files` 上，拿到一个 HTML 而不是 JSON —— 症状是「验证码加载失败」而不是 404，
-> 排查时容易走弯路。后端 dev 的 Vite `server.proxy` 里也补了同样一条。
+> **关于 `/app-api/captcha/`**：AJ-Captcha 插件把端点写死在根路径 `/captcha/get`、`/captcha/check`，
+> 浏览器侧统一走 `/app-api/captcha/**`（后端由 framework 的 `AppCaptchaController` 映射）。
+> `nginx/default.conf` 里单独有一条 `location /app-api/captcha/`（限流桶 `admin_captcha`），
+> 插件原生的 `/captcha/**` 显式返回 404。少了这条，验证码请求会落到普通 `/app-api/`
+> 而失去独立限流桶；若落进 `location /` 的 `try_files`，则会拿到 HTML 而不是 JSON。
+> 后端 dev 的 Vite `server.proxy` 按普通 `/app-api` 转发，不需要额外改写。
 
 ## 推荐流程
 
