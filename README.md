@@ -156,9 +156,9 @@ pnpm run build    # 产出 dist/
 
 ### 接口与开放
 
-- **接口分层**：`/admin-api` 管理端（登录态）、`/app-api` 前台公开（默认免登录）、`/open-api` 第三方开放接口（OAuth2 + Scope）、`/oauth2/token` 令牌端点（详见 [开发规范](docs/开发规范.md#接口路径约定)）
+- **接口分层**：`/admin-api` 管理端（登录态）、`/app-api` 前台公开（默认免登录）、`/open-api` 第三方开放接口（OAuth2 + Scope，令牌端点 `/open-api/oauth2/token`）（详见 [开发规范](docs/开发规范.md#接口路径约定)）
 - **单点登录（SSO）**：跨应用免二次登录；后台维护 SSO 客户端白名单（标识 / 允许 Origin / 打开地址 / 接入路径，`sys_sso_client`），登录端签发一次性票据（Redis，默认 60s，可配 `designer.sso.ticket-ttl`），目标端换取同一会话，票据用后即删（接入文档与案例代码见 [docs/SSO.md](docs/SSO.md)、[designer-ui/sso-demo](designer-ui/sso-demo)）
-- **开放接口（OAuth2）**：Client Credentials 令牌端点 `POST /oauth2/token`（支持 `client_id/client_secret` 或 Basic Auth）；`/open-api/**` 按路径匹配 Scope（`sys_oauth_scope`）校验 access_token，缺少授权 scope 返回 403；后台可管理 OAuth2 客户端与开放 Scope（`sys_oauth_client` / `sys_oauth_client_scope`）
+- **开放接口（OAuth2）**：Client Credentials 令牌端点 `POST /open-api/oauth2/token`（支持 `client_id/client_secret` 或 Basic Auth；后端 8080 不对外开放，统一经 nginx 转发）；`/open-api/**` 按路径匹配 Scope（`sys_oauth_scope`）校验 access_token，缺少授权 scope 返回 403；后台可管理 OAuth2 客户端与开放 Scope（`sys_oauth_client` / `sys_oauth_client_scope`）
 
 ### 前端体验与通用能力
 
@@ -173,7 +173,7 @@ pnpm run build    # 产出 dist/
 
 ## 技术栈
 
-后端为 **Solon 全家桶**：框架、校验、日志、JSON、鉴权、密码加密全部来自 Solon / Sa-Token 生态。
+后端为 **Solon 全家桶**：框架、校验、日志、JSON、鉴权来自 Solon / Sa-Token 生态；密码哈希使用独立的 BCrypt 实现（Sa-Token 1.41 起已不再维护加密模块）。
 
 | 层 | 选型 | 版本 |
 |---|---|---|
@@ -182,7 +182,7 @@ pnpm run build    # 产出 dist/
 | ORM | MyBatis-Plus（Solon 插件） | 3.5.17 |
 | 多表查询 | MyBatis-Plus-Join | 1.5.9 |
 | 鉴权 | Sa-Token（Solon 插件） | 1.46.0 |
-| 密码加密 | Sa-Token 自带 BCrypt | 内置 |
+| 密码加密 | BCrypt（at.favre.lib） | 0.10.2 |
 | JSON | snack4 | Solon 4.x 内置 |
 | 定时任务 | Quartz | 2.5.0 |
 | 导入导出 | EasyExcel | 4.0.3 |
