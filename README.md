@@ -148,7 +148,7 @@ pnpm run build    # 产出 dist/
 
 ### 日志、监控与任务
 
-- **应用日志**：Solon + Logback，控制台与文件双输出；文件按「天 + 单文件大小」滚动（`maxFileSize` 默认 10 MB），`maxHistory` 默认保留 7 天、`totalSizeCap` 上限 1 GB（配置项 `solon.logging.appender.file.*`）
+- **应用日志**：Solon + Logback，控制台、全量文件、error 独立文件三路输出（error 文件仅记录 ERROR，默认 `*-error.log`）；文件按「天 + 单文件大小」滚动（`maxFileSize` 默认 10 MB），`maxHistory` 默认保留 7 天、`totalSizeCap` 上限 1 GB；appender 由 `designer-server/src/main/resources/logback-solon.xml` 定义，路径 / 级别 / 滚动参数仍由 `solon.logging.appender.*` 配置
 - **操作日志**：`@OperLog` 异步落库（`sys_oper_log`），记录标题 / 业务类型 / 参数 / 耗时
 - **登录日志**：账号 / IP / 浏览器 / 系统 / 结果（`sys_login_log`）
 - **服务监控**：CPU / 内存 / JVM / 磁盘等系统信息（`GET /admin-api/system/monitor/server`），首页仪表盘展示
