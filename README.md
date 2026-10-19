@@ -152,7 +152,8 @@ pnpm run build    # 产出 dist/
 - **操作日志**：`@OperLog` 异步落库（`sys_oper_log`），记录标题 / 业务类型 / 参数 / 耗时
 - **登录日志**：账号 / IP / 浏览器 / 系统 / 结果（`sys_login_log`）
 - **服务监控**：CPU / 内存 / JVM / 磁盘等系统信息（`GET /admin-api/system/monitor/server`），首页仪表盘展示
-- **定时任务**：Quartz 动态任务（cron / 调用目标 / 并发策略）+ 执行日志（`sys_job` / `sys_job_log`）
+- **定时任务**：Quartz 动态任务（cron / 调用目标 / 并发策略）+ 执行日志（`sys_job` / `sys_job_log`）；调度状态持久化在 `QRTZ_*` 表并启用集群模式（多实例不重复执行）
+- **消息总线**：framework 的 `MessageBus` SPI（`publish` / `subscribe` + 可关闭的订阅句柄），内置 `redis`（Pub/Sub，默认）与 `local`（进程内，单机调试）两种实现，由 `designer.mq.type` 选择；站内信 SSE 跨实例广播即基于它，新增 MQ 只需实现接口并标注 `@Component`
 
 ### 接口与开放
 
@@ -185,6 +186,7 @@ pnpm run build    # 产出 dist/
 | 密码加密 | BCrypt（at.favre.lib） | 0.10.2 |
 | JSON | snack4 | Solon 4.x 内置 |
 | 定时任务 | Quartz | 2.5.0 |
+| 消息总线 | 自研 `MessageBus` SPI（默认 Redis Pub/Sub） | — |
 | 导入导出 | EasyExcel | 4.0.3 |
 | 数据库 | MySQL | 8 |
 | 缓存/会话 | Redis | 7 |
