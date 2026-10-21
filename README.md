@@ -477,11 +477,11 @@ cp .env.example .env
 bash sql/init/mysql/00-run-init.sh
 
 # 免交互（CI / 脚本）
-DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD=root DB_NAME=designer_admin \
+DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD=root DB_NAME=designer_admin_base \
   bash sql/init/mysql/00-run-init.sh
 ```
 
-默认数据库名为 `designer_admin`，可在交互中或通过 `DB_NAME` 自定义。
+默认数据库名为 `designer_admin_base`，可在交互中或通过 `DB_NAME` 自定义。
 
 ### 3. 启动后端
 

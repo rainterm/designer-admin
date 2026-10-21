@@ -17,9 +17,9 @@ services:
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m -Dfile.encoding=UTF-8}
       DB_HOST: ${DB_HOST:-host.docker.internal}
       DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME:-designer_admin}
+      DB_NAME: ${DB_NAME:-designer_admin_base}
       DB_USER: ${DB_USER:-root}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
       REDIS_HOST: ${REDIS_HOST:-host.docker.internal}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
