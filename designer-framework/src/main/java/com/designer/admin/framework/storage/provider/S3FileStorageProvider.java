@@ -3,13 +3,13 @@ package com.designer.admin.framework.storage.provider;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.framework.storage.FileStorageProvider;
+import com.designer.admin.framework.storage.StorageCachePolicy;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Destroy;
 import org.noear.solon.annotation.Inject;
-import org.noear.solon.core.handle.UploadedFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -95,16 +95,22 @@ public class S3FileStorageProvider implements FileStorageProvider {
     }
 
     @Override
-    public void store(UploadedFile file, String filePath, String contentType, StorageRuntimeConfig config) {
+    public void store(InputStream in, long size, String filePath, String contentType, StorageRuntimeConfig config) {
         S3Client client = clientOf(config);
-        try (InputStream in = file.getContent()) {
+        try {
             PutObjectRequest req = PutObjectRequest.builder()
                     .bucket(config.prop("bucket"))
                     .key(filePath)
                     .contentType(contentType)
-                    .contentLength(file.getContentSize())
+                    .contentLength(size)
+                    // 公开配置可能返回 CDN / 公网直链，浏览器与边缘节点根本不经过后端的下载接口，
+                    // 因此缓存策略必须在**上传时**写进对象元数据，由对象存储当响应头返回。
+                    // 私有对象的直链不会下发（buildAccessUrl 只在公开配置上用 publicUrl），
+                    // 但同样写上 no-store：万一以后有人把私有桶接到 CDN 上，也不至于被缓存。
+                    .cacheControl(StorageCachePolicy.of(config.isPublicAccess()))
                     .build();
-            client.putObject(req, RequestBody.fromInputStream(in, file.getContentSize()));
+            // 流由调用方关闭；body 的长度必须与压缩后的实际字节数一致，SDK 才能定长签名
+            client.putObject(req, RequestBody.fromInputStream(in, size));
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {

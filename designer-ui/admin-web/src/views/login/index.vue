@@ -29,7 +29,7 @@
 
         <!--
           人机验证面板按需展示（后端：全局开启且该账号失败 ≥ 阈值）。
-          默认不出现，也就不请求、不占版面。
+          默认不出现，也就不请求、不占版面；仅在连续失败达阈值后展示。
         -->
         <n-form-item v-if="captchaVisible" label="安全验证">
           <SliderCaptcha ref="captchaRef" :api="captchaApi" @verified="onVerified" />

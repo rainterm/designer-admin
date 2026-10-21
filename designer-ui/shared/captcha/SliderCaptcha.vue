@@ -46,15 +46,15 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { IMAGE_WIDTH, PIECE_WIDTH, buildCredentials, toServerOffset } from './sliderCaptcha.js'
 
 /**
- * 滑块拼图验证码（AJ-Captcha blockPuzzle 的前端实现），各入口共用。
+ * 滑块拼图验证码（AJ-Captcha blockPuzzle 的前端实现），多端入口共用（如后台登录）。
  *
  * <p>不直接依赖任何 HTTP 客户端：请求能力由 {@link api} 注入
  * （用 {@code createCaptchaApi} 配各站的传输层生成），组件只负责交互与坐标换算。</p>
  *
  * <p>样式依赖的 CSS 变量（{@code --color-body}、{@code --color-border}、{@code --color-primary}、
- * {@code --color-text-muted}、{@code --radius}）在各站点的 token 文件里都有定义，
- * 所以同一份组件在各处都能直接贴合主题；{@code --color-success} 并非每个站点都定义，
- * 故给一个兜底值而不让「验证通过」态失色。</p>
+ * {@code --color-text-muted}、{@code --radius}）在两个站点的 token 文件里都有定义，
+ * 所以同一份组件在两处都能直接贴合主题；{@code --color-success} 部分主题才会定义，
+ * 故给一个兜底值而不让后台的「验证通过」态失色。</p>
  */
 const props = defineProps({
   /** 由 createCaptchaApi 生成的接口客户端 */

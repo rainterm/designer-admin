@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { syncBrandMark } from './plugins/syncBrandMark.js'
+import { compressAssets, minifyHtml } from './plugins/compressAssets.js'
 
 /**
  * 滑块验证码的共享源码目录（见 designer-ui/shared/captcha）。
@@ -13,7 +14,7 @@ import { syncBrandMark } from './plugins/syncBrandMark.js'
 const sharedCaptchaDir = fileURLToPath(new URL('../shared/captcha', import.meta.url))
 
 export default defineConfig({
-  plugins: [vue(), syncBrandMark()],
+  plugins: [vue(), syncBrandMark(), minifyHtml(), compressAssets()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -78,6 +79,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    /**
+     * 生产产物必须压缩：Vite 默认用 Oxc 压 JS、用 Lightning CSS 压 CSS
+     * （去掉换行与多余空格）。这里显式写出来，避免以后有人改成 false ——
+     * 关掉后产物体积会直接翻倍。
+     *
+     * <p>`.gz` 由 `plugins/compressAssets.js` 在构建末尾生成，
+     * 生产由 nginx 的 `gzip_static` 直接下发（见 deploy/nginx/default.conf）。</p>
+     */
+    minify: 'oxc',
+    cssMinify: true,
     chunkSizeWarningLimit: 1600
   }
 })

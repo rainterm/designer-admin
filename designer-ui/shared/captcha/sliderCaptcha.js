@@ -4,7 +4,7 @@ import ECB from 'crypto-js/mode-ecb.js'
 import Pkcs7 from 'crypto-js/pad-pkcs7.js'
 
 /**
- * 滑块验证码的线协议工具，各入口共用。
+ * 滑块验证码的线协议工具，多端入口共用（如后台登录）。
  *
  * <p>AJ-Captcha 的官方前端是 jQuery 写的 `verify.js`（外加 `ase.js` + `crypto-js`），
  * 直接塞进两个新前端里既带进 jQuery，又要在 `window` 上挂全局。

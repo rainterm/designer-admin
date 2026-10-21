@@ -13,6 +13,7 @@ import { createCaptchaApi } from '@captcha'
  *
  * <p><b>为什么可以直接复用 {@link request}</b>：它的响应拦截器对「非统一 R 结构」
  * （`code === undefined`）原样返回，而 AJ-Captcha 返回的正是
- * `{repCode, repMsg, repData}`，恰好落在那个分支里，语义是明确的而不是巧合。</p>
+ * `{repCode, repMsg, repData}`，恰好落在那个分支里，语义是明确的而不是巧合
+ * （见共享模块 createCaptchaApi 注释里的取舍）。</p>
  */
 export const captchaApi = createCaptchaApi((path, body) => request.post(path, body))

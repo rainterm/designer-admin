@@ -55,7 +55,7 @@
 | 数据权限 | 角色维度行级数据范围，MyBatis 拦截器自动改写 SQL |
 | SSO | 一次性票据跨应用免二次登录 |
 | OAuth2 | Client Credentials + Scope 的开放接口 |
-| 文件管理 | 本地 / S3 可插拔存储，上传校验、元数据落库、私有下载 |
+| 文件管理 | 本地 / S3 可插拔存储，上传校验、图片压缩、元数据落库、私有下载 |
 | 消息管理 | 站内信、邮件通道配置与发送记录 |
 | 消息推送 | SSE 实时站内信，多实例经消息总线广播 |
 | 定时任务 | Quartz JDBC 集群调度，动态 cron、执行日志 |
@@ -108,6 +108,16 @@
 - 存储方式可插拔：内置**本地磁盘**与 **S3 兼容**（MinIO、OSS、COS 等）实现，实现类通过 `type()` / `configFields()` 自描述，前端据此动态渲染配置表单。
 - 上传元数据落 `sys_file`，存储配置落 `sys_storage_config`，后台可切换默认存储、配置公开 / 私有访问。
 - 上传校验：扩展名白名单推导 Content-Type（不采信客户端声明）、大小限制、路径穿越双重校验。
+- **图片压缩**：开关在**系统管理 → 存储配置 → 编辑 →「图片压缩」**，按配置在服务端落盘前压缩，所有走 `FileStorageService#store` 的入口统一生效（不必在每个上传点单独处理）。
+
+  | 格式 | 行为 |
+  |---|---|
+  | JPEG | 有损重编码，质量参数生效（10–100） |
+  | PNG | 无损重编码，质量参数无效（固定最高 deflate 级别） |
+  | GIF / WebP / AVIF / SVG / ICO | 跳过：动图重编码只剩第一帧，其余 JDK ImageIO 不支持编码 |
+
+  压缩后体积更大或压缩失败时降级保留原文件，不阻断上传。
+- **图片缓存**：文件名含 UUID、内容不会被原地覆盖，公开文件 `Cache-Control: public, max-age=31536000, immutable`，私有文件 `private, no-store`。代理下载接口与 S3 直链（上传时写入对象元数据）共用 `StorageCachePolicy`，避免两条链路缓存策略分叉。
 - 下载：私有文件需登录（`/admin-api/system/file/download/**`），公开文件免登录（`/app-api/system/file/download/**`）；私有下载用 Path 限定的 HttpOnly Cookie，避免放开全局 Cookie 鉴权。
 - 响应增加 `X-Content-Type-Options: nosniff` 与 CSP sandbox，前端用 `AttachmentUploader` 复用上传、回显与删除。
 
@@ -160,7 +170,7 @@
 | 缓存 / 会话 | Redis | 7 | 会话、权限快照、限流、验证码、Pub/Sub 共用 |
 | 前端框架 | Vue | 3.5 | 组合式 API，模块边界清晰 |
 | UI 组件库 | Naive UI | 2.45 | 主题变量完善，适合做统一外观 |
-| 构建 | Vite | 8 | 冷启动与 HMR 快，构建配置简单 |
+| 构建 | Vite | 8 | 冷启动与 HMR 快；生产构建 minify 并预生成 `.gz` |
 | 状态管理 | Pinia | 4 | 轻量、TypeScript 友好 |
 | 路由 | Vue Router | 5.3 | 动态路由与守卫能力完整 |
 | 图表 | ECharts | 5.6 | 仪表盘与统计图 |
@@ -405,6 +415,20 @@ views / modules 页面
 - 偏好设置支持主题色、布局、页签、侧栏等切换并持久化；未自定义时回退到「系统设置」下发的默认布局与默认主题色。
 - 品牌信息（系统名称、Logo、Logo 圆角、favicon）由系统设置驱动，换品牌不需要改代码。
 - 新增外观维度时，优先在 `theme/` 与 `styles/index.css` 增加变量，再由组件消费，避免逐页调样式。
+
+#### 构建压缩
+
+生产产物在**构建期**完成压缩，运行时 nginx 只负责挑合适的文件下发，不在请求路径上现压。
+
+| 环节 | 做法 | 说明 |
+|---|---|---|
+| JS / CSS 内容压缩 | `vite.config.js` 显式 `build.minify: 'oxc'`、`build.cssMinify: true` | 去掉换行与多余空格；写死配置避免被改成 `false` 导致体积翻倍 |
+| `index.html` | `plugins/compressAssets.js` 的 `minifyHtml` | Vite 默认不压 HTML；插件去注释、折叠空白，并单独压缩内联脚本 |
+| gzip 预压缩 | 同插件的 `compressAssets`，对 `dist/**` 生成同名 `.gz`（`gzip -9`） | 只压文本类扩展名；小于 1KB 或压完反而变大的跳过 |
+| 下发 | nginx `gzip_static on` + `gzip on`（见 `deploy/nginx/default.conf`） | 优先下发构建好的 `.gz`，找不到再回落现压；`gzip_vary on` 让代理按 `Accept-Encoding` 分缓存 |
+
+- `compressAssets` 在 `closeBundle` 执行，等 `public/` 也复制进 `dist/` 之后再扫，一次构建覆盖全部静态资源。
+- `.gz` 是构建产物，不要手动创建或提交（`dist/` 已在 `.gitignore`）；本地 `vite preview` 也会命中预压缩文件，无需额外配置。
 
 ## 快速开始（本地开发）
 

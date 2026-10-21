@@ -15,13 +15,13 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_oauth_scope")
 public class SysOauthScope extends BaseEntity {
 
-    /** Scope 标识（唯一），随 token 下发，如 {@code demo:read} */
+    /** Scope 标识（唯一），随 token 下发，如 {@code blog:read} */
     private String scopeCode;
 
     /** Scope 名称，后台展示用 */
     private String scopeName;
 
-    /** 该 Scope 可访问的接口路径通配符，如 {@code /app-api/demo/**} */
+    /** 该 Scope 可访问的接口路径通配符，如 {@code /app-api/blog/**} */
     private String pathPattern;
 
     /** 显示顺序，越小越靠前 */

@@ -4,15 +4,15 @@ import { clientUid } from './clientUid.js'
  * 滑块验证码接口（AJ-Captcha），传输层由调用方注入。
  *
  * <p><b>为什么要注入 request 而不是直接用某个 HTTP 客户端</b>：
- * 这两个端点的消费方可能不止一个前端 —— 例如 Nuxt 3（用全局 `$fetch`）与
- * Vite + axios（且带统一拦截器）。把 `$fetch` 写死在这里就绑死了 Nuxt；
+ * 这两个端点可能被多套前端消费 —— 例如 Nuxt 3（用全局 `$fetch`），
+ * admin-web 是 Vite + axios（且带统一拦截器）。把 `$fetch` 写死在这里就绑死了 Nuxt；
  * 反过来绑 axios 又给 Nuxt 引入一个不必要的依赖。所以这里只声明**形状**：
  * {@code request(path, body)} 返回已解析的响应 JSON。</p>
  *
- * <p><b>为什么不用各站的统一响应封装</b>：各站的封装都建立在后端统一的
- * `Result` 结构（{@code {code, msg, data}}）上，而这几个端点由第三方插件提供，
+ * <p><b>为什么不用各站的统一响应封装</b>：两站的封装都建立在后端统一的
+ * `R` 结构（{@code {code, msg, data}}）上，而这几个端点由第三方插件提供，
  * 返回的是它自己的 {@code {repCode, repMsg, repData}}（成功码是字符串 `0000`）。
- * 硬套过去会落进「非统一响应结构就原样返回」的分支，语义靠巧合成立 ——
+ * 硬套过去会落进「非 R 结构就原样返回」的分支，语义靠巧合成立 ——
  * 不如在这里显式处理对方协议。</p>
  */
 

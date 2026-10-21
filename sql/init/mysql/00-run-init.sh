@@ -6,13 +6,17 @@
 #  连接信息：环境变量优先（DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME，
 #    兼容 MYSQL_HOST / MYSQL_PORT / MYSQL_ROOT_USER / MYSQL_ROOT_PASSWORD / MYSQL_PWD / MYSQL_DATABASE）；
 #    交互终端下仅对「未提供」的项提示输入，全部已提供则不提示；非交互环境不提示。
-#  数据库名默认 designer_admin，可自定义。
+#  数据库名默认 designer_admin（与 designer-server/src/main/resources/app.yml 的 DB_NAME 默认值一致），可自定义。
 #
 #  新增业务模块：建同名目录（含 schema.sql / data.sql），并加入下方 MODULES
 # =====================================================================
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# SQL 文件里写死的库名占位符（统一为 app.yml 的默认库名）
+# 执行时会被替换成实际的 DB_NAME，因此 SQL 文件本身无须感知自定义库名
+SQL_DB_PLACEHOLDER="designer_admin"
 
 # 业务模块目录名（按依赖顺序；不含 _base）
 MODULES=(system demo)
@@ -55,11 +59,11 @@ if [[ -t 0 && -t 1 ]]; then
   [[ -n "${DB_PORT}" ]] || DB_PORT="$(ask 'MySQL 端口' '3306')"
   [[ -n "${DB_USER}" ]] || DB_USER="$(ask 'MySQL 用户' 'root')"
   [[ -n "${DB_PASSWORD}" ]] || DB_PASSWORD="$(ask_secret 'MySQL 密码（无密码直接回车）')"
-  [[ -n "${DB_NAME}" ]] || DB_NAME="$(ask '数据库名' 'designer_admin')"
+  [[ -n "${DB_NAME}" ]] || DB_NAME="$(ask '数据库名' "${SQL_DB_PLACEHOLDER}")"
 else
   DB_PORT="${DB_PORT:-3306}"
   DB_USER="${DB_USER:-root}"
-  DB_NAME="${DB_NAME:-designer_admin}"
+  DB_NAME="${DB_NAME:-${SQL_DB_PLACEHOLDER}}"
 fi
 
 # 数据库名会作为标识符代入 SQL，限定为字母/数字/下划线
@@ -86,8 +90,8 @@ run_file() {
   local file="$1"
   [[ -f "${file}" ]] || return 0
   echo "[sql-init] $(basename "$(dirname "${file}")")/$(basename "${file}")"
-  # 把 SQL 里写死的库名替换为实际库名，支持自定义 DB_NAME
-  sed "s/\`designer_admin\`/\`${DB_NAME}\`/g" "${file}" | "${mysql_cmd[@]}"
+  # 把 SQL 里写死的库名占位符替换为实际库名，支持自定义 DB_NAME
+  sed "s/\`${SQL_DB_PLACEHOLDER}\`/\`${DB_NAME}\`/g" "${file}" | "${mysql_cmd[@]}"
 }
 
 run_dir_ordered() {
@@ -116,5 +120,8 @@ run_dir_ordered "${ROOT}/_base"
 for module in "${MODULES[@]}"; do
   run_dir_ordered "${ROOT}/${module}"
 done
+
+# 老库增量脚本放最后：全新库上它们应是幂等空转，老库则补齐新增菜单 / 字段
+run_dir_ordered "${ROOT}/../../upgrade/mysql"
 
 echo "[sql-init] done"

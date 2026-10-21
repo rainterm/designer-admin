@@ -8,8 +8,8 @@ import { brandMarkSvg } from '@/theme/brandMark'
  * 必须在这里主动写 href —— 自定义 Logo 走 canvas 裁圆角后导出 PNG，
  * 未配置 Logo 时用主题色重绘内置 SVG。</p>
  *
- * <p>自定义 Logo 与内置图形、主题色、圆角三者统一在这一个入口收口，
- * 后续其它站点复用同一套做法即可保持标签图标观感一致。</p>
+ * <p>动态替换页面 favicon：
+ * 保持两个站点的标签图标观感一致。</p>
  */
 
 /** favicon 画布尺寸 */
